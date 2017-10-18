@@ -52,4 +52,4 @@ class Log(singletonmixin.Singleton):
 
     # default to info
     log = info
-    __call__ = log
+    __call__ 

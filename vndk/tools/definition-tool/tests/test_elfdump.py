@@ -6,12 +6,13 @@ import argparse
 import collections
 import difflib
 import os
+import re
 import subprocess
 import sys
 import unittest
 
 from compat import TemporaryDirectory, makedirs
-import targets
+import ndk_toolchain
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -30,7 +31,7 @@ def run_elf_dump(path):
 class ELFDumpTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.targets = targets.create_targets()
+        cls.targets = ndk_toolchain.create_targets()
 
         if test_dir_base:
             cls.test_dir_base = test_dir_base
@@ -75,12 +76,14 @@ class ELFDumpTest(unittest.TestCase):
         # Link libtest-rpath.so.
         out_file = os.path.join(cls.test_dir, 'libtest-rpath.so')
         target.link(out_file, [obj_file],
-                    ['-shared', '-lc', '-Wl,-rpath,$ORIGIN/../lib'])
+                    ['-shared', '-lc', '-Wl,-rpath,$ORIGIN/../lib',
+                     '-Wl,--disable-new-dtags'])
 
         # Link libtest-rpath-multi.so.
         out_file = os.path.join(cls.test_dir, 'libtest-rpath-multi.so')
         target.link(out_file, [obj_file],
-                    ['-shared', '-lc', '-Wl,-rpath,/system/lib:/vendor/lib'])
+                    ['-shared', '-lc', '-Wl,-rpath,/system/lib:/vendor/lib',
+                     '-Wl,--disable-new-dtags'])
 
         # Link libtest-runpath.so.
         out_file = os.path.join(cls.test_dir, 'libtest-runpath.so')
@@ -94,12 +97,25 @@ class ELFDumpTest(unittest.TestCase):
                     ['-shared', '-lc', '-Wl,-rpath,/system/lib:/vendor/lib',
                      '-Wl,--enable-new-dtags'])
 
+    def _remove_size_lines(self, lines):
+        """Remove file size information because they may vary."""
+        prefixes = (
+            'FILE_SIZE\t',
+            'RO_SEG_FILE_SIZE\t',
+            'RO_SEG_MEM_SIZE\t',
+            'RW_SEG_FILE_SIZE\t',
+            'RW_SEG_MEM_SIZE\t',
+        )
+        patt = re.compile('|'.join('(?:' + re.escape(x) +')' for x in prefixes))
+        return [line for line in lines if not patt.match(line)]
+
     def _assert_equal_to_file(self, expected_file_name, actual):
         actual = actual.splitlines(True)
         expected_file_path = os.path.join(self.expected_dir, expected_file_name)
         with open(expected_file_path, 'r') as f:
             expected = f.readlines()
-        self.assertEqual(expected, actual)
+        self.assertEqual(self._remove_size_lines(expected),
+                         self._remove_size_lines(actual))
 
     def _test_main_out(self):
         out_file = os.path.join(self.test_dir, 'main.out')

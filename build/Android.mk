@@ -89,19 +89,17 @@ ALL_SDK_FILES += $(android_jar_src_target)
 
 # ====================================================
 
-# The Jack & Jill compiler jars
-ALL_SDK_FILES += prebuilts/sdk/tools/jacks/jack-$(JACK_SDKTOOL_VERSION).jar
-ALL_SDK_FILES += prebuilts/sdk/tools/jills/jill-$(JACK_SDKTOOL_VERSION).jar
-
-# The Jack reporter tool for code coverage
-ALL_SDK_FILES += prebuilts/sdk/tools/jack-jacoco-reporter.jar
-ALL_SDK_FILES += prebuilts/sdk/tools/jack-coverage-plugin.jar
-
 # The uiautomator stubs
 ALL_SDK_FILES += $(TARGET_OUT_COMMON_INTERMEDIATES)/JAVA_LIBRARIES/android_uiautomator_intermediates/javalib.jar
 
 # org.apache.http.legacy.jar stubs
 ALL_SDK_FILES += $(TARGET_OUT_COMMON_INTERMEDIATES)/JAVA_LIBRARIES/org.apache.http.legacy_intermediates/javalib.jar
+
+# core-lambda-stubs
+ALL_SDK_FILES += $(TARGET_OUT_COMMON_INTERMEDIATES)/JAVA_LIBRARIES/core-lambda-stubs_intermediates/classes.jar
+
+# shrinkedAndroid.jar for multidex support
+ALL_SDK_FILES += $(HOST_OUT_COMMON_INTERMEDIATES)/JAVA_LIBRARIES/shrinkedAndroid_intermediates/shrinkedAndroid.jar
 
 # $(1): the Java library name
 define _package_sdk_library
@@ -132,7 +130,7 @@ api_gen_classpath := $(subst $(space),:,$(api_gen_jar) $(api_gen_deps))
 
 
 $(HOST_OUT)/development/sdk/generated-api-versions.xml: $(android_jar_full_target)
-	java -cp $(api_gen_classpath) \
+	$(JAVA) -cp $(api_gen_classpath) \
 	  com.android.apigenerator.Main \
 	  --pattern $(TOPDIR)prebuilts/tools/common/api-versions/android-%/android.jar \
 	  --pattern $(TOPDIR)prebuilts/sdk/%/android.jar \
